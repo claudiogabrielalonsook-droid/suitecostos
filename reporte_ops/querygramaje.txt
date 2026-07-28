@@ -1,0 +1,34 @@
+SELECT
+    c.NumOrdem,
+    em.DescMaterial,
+    em.Gramatura
+FROM dbo.CustosPreConsolidacao c
+
+INNER JOIN dbo.OrdensProducao o
+    ON c.NumOrdem = o.NumOrdem
+
+INNER JOIN dbo.EstrMateriais em
+    ON em.CodEstrutura = o.CodEstrutura
+   AND em.Gramatura <> 0
+   AND (
+        UPPER(LTRIM(RTRIM(em.DescMaterial))) =
+        UPPER(LTRIM(RTRIM(c.Descricao)))
+
+        OR
+
+        (
+            em.CodItem IS NOT NULL
+            AND LTRIM(RTRIM(em.CodItem)) <> ''
+            AND UPPER(c.Descricao) LIKE '%' + UPPER(em.CodItem) + '%'
+        )
+   )
+
+LEFT JOIN dbo.plnTCWOStatus ws
+    ON ws.IdWOStatus = o.IdWOStatus
+
+WHERE
+    o.Situacao = 'E'
+    AND ISNULL(ws.Name, '') = 'Cerrada'
+    AND c.TipoLancamento = 'P'
+    AND c.DebCred <> 'C'
+    AND c.NumOrdem = '{op}'

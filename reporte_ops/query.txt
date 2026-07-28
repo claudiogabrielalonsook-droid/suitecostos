@@ -1,0 +1,104 @@
+SELECT
+    c.ConjuntoLancamento,
+    c.TipoLancamento,
+    c.DEBCRED,
+    c.NumOrdem,
+    c.Natureza,
+    c.ObjID_ContasDeCusto,
+    c.CodSubConta,
+    c.UnidadeFisica,
+    c.Qtde,
+    c.Valor,
+    c.Lote,
+    c.Descricao,
+    c.SourceID,
+    c.DtReferencia,
+
+    -- Datos OP
+    o.Usr_Presupuesto,
+    o.Usr_Tecnico,
+    o.Usr_Edicao,
+    o.TipoProduto,
+    o.DtRefAcr AS DtRefCustos,
+    o.Descricao AS TituloOP,
+    o.NomeCliente,
+
+    -- Datos cierre
+    o.Situacao,
+    o.DtEncerramento,
+    ISNULL(ws.Name, '') AS WOStatusName,
+
+    -- Datos estructura
+    e.Acabamentos,
+    e.QtdPaginas,
+    e.ImagensCad,
+    e.Embalagem,
+    e.QtdNoPacote,
+    e.User3,
+    e.User4,
+    e.FormatoFechado,
+    e.FormatoAberto,
+    e.usr_Liberacion,
+    e.usr_Responsable,
+    e.usr_FechaLib,
+    e.usr_observacion,
+    e.USR_PlanillaTecnicaP,
+    e.USR_ImagenPDF,
+    e.usr_RespLiberacion,
+    e.usr_FechaLiberacion,
+
+    -- Datos costos
+    ISNULL(h.QtdPrevista, 0) AS QtdPrevista,
+    ISNULL(h.ValorUnitarioPrevisto, 0) AS ValorUnitarioPrevisto,
+    ISNULL(h.ValorTotalPrevisto, 0) AS ValorTotalPrevisto,
+    ISNULL(h.CustoUnitarioPrevisto, 0) AS CustoUnitarioPrevisto,
+    ISNULL(h.CustoTotalPrevisto, 0) AS CustoTotalPrevisto,
+    ISNULL(h.QtdFaturado, 0) AS QtdFaturado,
+    ISNULL(h.ValorUnitarioFaturado, 0) AS ValorUnitarioFaturado,
+    ISNULL(h.ValorTotalFaturado, 0) AS ValorTotalFaturado,
+    ISNULL(h.CustoUnitarioReal, 0) AS CustoUnitarioReal,
+    ISNULL(h.CustoTotalReal, 0) AS CustoTotalReal,
+    ISNULL(h.QtdTotalProduzida, 0) AS QtdTotalProduzida,
+
+    -- Porcentajes
+    c.PercCusto1,
+    c.PercCusto2,
+    c.PercCusto3,
+    c.PercCusto4,
+    c.PercCusto5
+
+FROM dbo.CustosPreConsolidacao c
+
+-- OP
+INNER JOIN dbo.OrdensProducao o
+    ON c.NumOrdem = o.NumOrdem
+
+-- Estructura asociada a la OP
+LEFT JOIN dbo.EstruturasOp e
+    ON o.CodEstrutura = e.CodEstrutura
+
+-- Header de costos asociado a la OP
+LEFT JOIN dbo.CustosHeaderOP h
+    ON c.NumOrdem = h.NumOrdem
+
+-- Cuenta de costo
+LEFT JOIN dbo.ContasDeCusto cc
+    ON c.ObjID_ContasDeCusto = cc.ObjID
+
+-- Estado OP
+LEFT JOIN dbo.plnTCWOStatus ws
+    ON ws.IdWOStatus = o.IdWOStatus
+
+WHERE
+    o.Situacao = 'E'
+    AND ISNULL(ws.Name, '') = 'Cerrada'
+    AND c.TipoLancamento <> 'L'
+    AND o.DtEncerramento >= '{fecha_inicio}'
+    AND o.DtEncerramento <= '{fecha_cierre}'
+    AND DebCred != 'C'
+
+ORDER BY
+    c.NumOrdem,
+    c.ConjuntoLancamento,
+    c.TipoLancamento;
+
