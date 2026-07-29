@@ -1,9 +1,11 @@
+import getpass
 import logging
-from pathlib import Path
-from io import BytesIO
-from datetime import datetime
-import sys
 import os
+import socket
+import sys
+from datetime import datetime
+from io import BytesIO
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -43,7 +45,44 @@ logging.basicConfig(
 # FUNCIONES AUXILIARES
 # ==========================================
 
-def agregar_log(mensaje):
+def get_request_context():
+    user_agent = "desconocida"
+    username = "desconocida"
+    hostname = "desconocida"
+    machine_name = "desconocida"
+
+    try:
+        context = getattr(st, "context", None)
+        if isinstance(context, dict):
+            headers = context.get("headers") or {}
+        else:
+            headers = getattr(context, "headers", None) or {}
+
+        if isinstance(headers, dict):
+            user_agent = headers.get("User-Agent", user_agent)
+    except Exception:
+        pass
+
+    try:
+        username = getpass.getuser() or os.getenv("USERNAME") or os.getenv("USER") or username
+    except Exception:
+        pass
+
+    try:
+        hostname = socket.gethostname()
+        machine_name = hostname
+    except Exception:
+        pass
+
+    return {
+        "user_agent": user_agent,
+        "username": username,
+        "hostname": hostname,
+        "machine_name": machine_name,
+    }
+
+
+def agregar_log(mensaje, request_context=None):
 
     if "logs" not in st.session_state:
         st.session_state.logs = []
@@ -52,8 +91,17 @@ def agregar_log(mensaje):
         "%H:%M:%S"
     )
 
+    if request_context is None:
+        request_context = get_request_context()
+
+    detalle = (
+        f" | username={request_context['username']}"
+        f" | hostname={request_context['hostname']}"
+        f" | machine={request_context['machine_name']}"
+    )
+
     st.session_state.logs.append(
-        f"[{hora}] {mensaje}"
+        f"[{hora}] {mensaje}{detalle}"
     )
 
 
@@ -80,7 +128,8 @@ def leer_query_sql():
 
 def ejecutar_consulta_con_fechas(
     fecha_inicio,
-    fecha_cierre
+    fecha_cierre,
+    request_context=None
 ):
     """
     Ejecuta consulta SQL con fechas.
@@ -93,9 +142,16 @@ def ejecutar_consulta_con_fechas(
         fecha_cierre=fecha_cierre
     )
 
+    if request_context is None:
+        request_context = get_request_context()
+
     logging.info(
-        f"Ejecutando consulta "
-        f"{fecha_inicio} -> {fecha_cierre}"
+        "Ejecutando consulta SQL | fecha_inicio=%s | fecha_cierre=%s | username=%s | hostname=%s | machine=%s",
+        fecha_inicio,
+        fecha_cierre,
+        request_context["username"],
+        request_context["hostname"],
+        request_context["machine_name"],
     )
 
     with obtener_conexion() as conn:
@@ -113,6 +169,7 @@ def ejecutar_consulta_con_fechas(
 # ==========================================
 
 def main():
+    request_context = get_request_context()
 
     # ==========================================
     # SESSION STATE
@@ -124,6 +181,15 @@ def main():
     # ==========================================
     # HEADER
     # ==========================================
+
+    logging.info(
+        "Página de Streamlit cargada | page=%s | username=%s | hostname=%s | machine=%s | user_agent=%s",
+        "Reporte OPs",
+        request_context["username"],
+        request_context["hostname"],
+        request_context["machine_name"],
+        request_context["user_agent"],
+    )
 
     st.title(
         "📊 Reporte OPs"
@@ -212,12 +278,14 @@ def main():
                 # ==========================================
 
                 agregar_log(
-                    "Iniciando ejecución..."
+                    "Iniciando ejecución...",
+                    request_context=request_context
                 )
 
                 agregar_log(
                     f"Fechas seleccionadas: "
-                    f"{fecha_inicio} -> {fecha_cierre}"
+                    f"{fecha_inicio} -> {fecha_cierre}",
+                    request_context=request_context
                 )
 
                 log_container.code(
@@ -232,7 +300,8 @@ def main():
                 # ==========================================
 
                 agregar_log(
-                    "Ejecutando consulta SQL..."
+                    "Ejecutando consulta SQL...",
+                    request_context=request_context
                 )
 
                 log_container.code(
@@ -248,12 +317,14 @@ def main():
                     ),
                     fecha_cierre.strftime(
                         "%Y-%m-%d"
-                    )
+                    ),
+                    request_context=request_context
                 )
 
                 agregar_log(
                     f"Consulta completada. "
-                    f"Registros: {len(df)}"
+                    f"Registros: {len(df)}",
+                    request_context=request_context
                 )
 
                 log_container.code(
@@ -266,7 +337,8 @@ def main():
                 if df.empty:
 
                     agregar_log(
-                        "Sin resultados."
+                        "Sin resultados.",
+                        request_context=request_context
                     )
 
                     st.warning(
@@ -280,7 +352,8 @@ def main():
                 # ==========================================
 
                 agregar_log(
-                    "Transformando dataframe..."
+                    "Transformando dataframe...",
+                    request_context=request_context
                 )
 
                 log_container.code(
@@ -300,7 +373,8 @@ def main():
                 )
 
                 agregar_log(
-                    "Transformación finalizada."
+                    "Transformación finalizada.",
+                    request_context=request_context
                 )
 
                 # ==========================================
@@ -308,7 +382,8 @@ def main():
                 # ==========================================
 
                 agregar_log(
-                    "Procesando descripciones..."
+                    "Procesando descripciones...",
+                    request_context=request_context
                 )
 
                 log_container.code(
@@ -320,7 +395,8 @@ def main():
 
 
                 agregar_log(
-                    "Procesamiento finalizado."
+                    "Procesamiento finalizado.",
+                    request_context=request_context
                 )
 
                 # ==========================================
@@ -328,7 +404,8 @@ def main():
                 # ==========================================
 
                 agregar_log(
-                    "Guardando resultados..."
+                    "Guardando resultados...",
+                    request_context=request_context
                 )
 
                 st.session_state.df_OPs = (
@@ -344,7 +421,8 @@ def main():
                 )
 
                 agregar_log(
-                    "Resultados guardados."
+                    "Resultados guardados.",
+                    request_context=request_context
                 )
 
                 log_container.code(
@@ -365,7 +443,8 @@ def main():
             except Exception as e:
 
                 agregar_log(
-                    f"ERROR: {str(e)}"
+                    f"ERROR: {str(e)}",
+                    request_context=request_context
                 )
 
                 log_container.code(
@@ -383,8 +462,12 @@ def main():
                 )
 
                 logging.error(
+                    "Error en Reporte OPs | username=%s | hostname=%s | machine=%s | error=%s",
+                    request_context["username"],
+                    request_context["hostname"],
+                    request_context["machine_name"],
                     str(e),
-                    exc_info=True
+                    exc_info=True,
                 )
 
                 return
@@ -414,7 +497,8 @@ def main():
         )
 
         agregar_log(
-            "Creando archivo Excel..."
+            "Creando archivo Excel...",
+            request_context=request_context
         )
 
         # ==========================================
@@ -450,7 +534,8 @@ def main():
         excel_buffer.seek(0)
 
         agregar_log(
-            "Excel generado correctamente."
+            "Excel generado correctamente.",
+            request_context=request_context
         )
 
         # ==========================================
