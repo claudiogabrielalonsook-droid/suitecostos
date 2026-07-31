@@ -1,22 +1,11 @@
-WITH Ultimos AS (
-    SELECT
-        *,
-        ROW_NUMBER() OVER (
-            PARTITION BY ObjID_TBCustoMat
-            ORDER BY DataRef DESC, ObjID DESC
-        ) AS rn
-    FROM dbo.TBCustoMatItem
-)
-SELECT 
-    u.ObjID,
-    u.ObjID_TBCustoMat,
-    u.DataRef,
-    u.PrecoRevenda,
-    u.IdMoeda,
-    t.CodTabela,
-    t.Descricao,
-    t.UnidadeCusto
-FROM Ultimos u
-JOIN dbo.TBCustoMat t ON u.ObjID_TBCustoMat = t.ObjID
-WHERE u.rn = 1
-ORDER BY u.DataRef DESC
+SELECT
+    <campo_identificador> AS <alias_identificador>,
+    <campo_clave> AS <alias_clave>,
+    <campo_fecha> AS <alias_fecha>,
+    <campo_precio> AS <alias_precio>,
+    <campo_moneda> AS <alias_moneda>,
+    <campo_codigo> AS <alias_codigo>,
+    <campo_descripcion> AS <alias_descripcion>,
+    <campo_unidad> AS <alias_unidad>
+FROM <schema>.<tabla>
+ORDER BY <campo_fecha> DESC

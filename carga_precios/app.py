@@ -1,13 +1,16 @@
-import streamlit as st
-import pandas as pd
-import sys
 import os
+import sys
+
+import pandas as pd
+import streamlit as st
 
 # Agregar ruta para importar módulos compartidos
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from compartido.navbar import render_navbar
 from main import main as ejecutar_consulta
+
+IDENTIFICADOR_COL = os.getenv("IDENTIFICADOR_COL", "ObjID")
 
 # =========================================
 # CONFIGURACIÓN
@@ -140,9 +143,9 @@ if uploaded_file is not None:
         # VALIDAR OBJID
         # =========================================
 
-        if "ObjID" not in df_actual.columns:
+        if IDENTIFICADOR_COL not in df_actual.columns:
 
-            st.error("El archivo no contiene la columna ObjID")
+            st.error(f"El archivo no contiene la columna {IDENTIFICADOR_COL}")
             st.stop()
 
         st.markdown(
@@ -171,7 +174,7 @@ if uploaded_file is not None:
 
             merge = df_actual.merge(
                 df_anterior,
-                on="ObjID",
+                on=IDENTIFICADOR_COL,
                 how="inner",
                 suffixes=("_nuevo", "_anterior")
             )
@@ -198,7 +201,7 @@ if uploaded_file is not None:
                     if str(nuevo) != str(anterior):
 
                         cambio = {
-                            "ObjID": objid,
+                            IDENTIFICADOR_COL: objid,
                             "Campo": columna,
                             "Valor Anterior": anterior,
                             "Valor Nuevo": nuevo
@@ -212,7 +215,7 @@ if uploaded_file is not None:
 
                         print("=" * 60)
 
-                        print(f"ObjID: {objid}")
+                        print(f"{IDENTIFICADOR_COL}: {objid}")
 
                         if "ID_nuevo" in row:
                             print(f"ID Item: {row['ID_nuevo']}")

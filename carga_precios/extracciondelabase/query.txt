@@ -1,0 +1,23 @@
+WITH Ultimos AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY <columna_clave>
+            ORDER BY <columna_fecha> DESC, <columna_id> DESC
+        ) AS rn
+    FROM <schema>.<tabla_origen>
+)
+SELECT
+    u.<columna_id>,
+    u.<columna_clave>,
+    u.<columna_fecha>,
+    u.<columna_precio>,
+    u.<columna_moneda>,
+    t.<columna_codigo_producto>,
+    t.<columna_descripcion>,
+    t.<columna_unidad>
+FROM Ultimos u
+JOIN <schema>.<tabla_referencia> t
+    ON u.<columna_clave> = t.<columna_id>
+WHERE u.rn = 1
+ORDER BY u.<columna_fecha> DESC;
